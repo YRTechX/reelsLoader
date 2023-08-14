@@ -1,6 +1,7 @@
 const express = require('express')
 const puppeteer = require('puppeteer');
 const cheerio = require('cheerio')
+const fs = require('fs');
 const cors = require('cors')
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -8,8 +9,8 @@ app.use(cors())
 app.listen(PORT, ()=>{
   console.log("start")
 })
-
-app.get('/api/:reelsId', async (req, res)=> {
+//input
+ app.get('/api/:reelsId', async (req, res)=> {
   const url = "https://www.instagram.com/reel/" + req.params.reelsId + "/"
   console.log('пришел запрос', req.params.reelsId)
   try {
@@ -18,7 +19,20 @@ app.get('/api/:reelsId', async (req, res)=> {
   } catch (error) {
     res.send({ success: false, error: error.message }); // Отправляем ошибку
   }
-})
+}) 
+
+//file
+/* app.post('/api/upload/', async (req, res)=> {
+  const uploadedFile = req.file;
+  console.log('пришел файл', uploadedFile)
+  try {
+    const videoUrl = await getLink(url);
+    res.send({ success: true, url: videoUrl }); // Отправляем успешный результат
+  } catch (error) {
+    res.send({ success: false, error: error.message }); // Отправляем ошибку
+  }
+}) */
+
 async function getLink(url){
   try {
     const browser = await puppeteer.launch();

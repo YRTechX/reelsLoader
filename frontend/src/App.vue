@@ -3,7 +3,17 @@
         <div class="content-wrapper">
             <div class="overlay" v-if="isLoading"><div class="loader"></div></div>
             <h2 class="headingText">Download Reels from Instagram</h2>
-            <input type="text" class="input" ref="input" placeholder="Insert Reels link"/>
+            <div class="dropArea" @dragover.prevent="onDragOver" @dragleave.prevent="onDragLeave" @drop.prevent = "onDrop">
+                <p v-if="!isDragging" class="dropAreaText">Drag and drop file here or <span @click="selectFile">Choose</span></p>
+                <p v-else class="dropAreaText">Drop the file here</p>
+
+            </div>
+            <input type="file" class="input" ref="input" accept= ".txt" @change="onFileSelect"/>
+            <template v-if="selectedFile">
+            <p>Selected file:</p>
+            <p class="selectedFile">{{selectedFile.name}}<span class="deleteIcon" @click="deleteFile">✕</span></p>
+            </template>
+            <input class="input" id="show" ref="saveDestination" placeholder="path for saving downloaded reels" type="text" v-model="pathToSave"/>
             <button class="confirmBtn" type="submit" @click.prevent="downloadMedia">Download Reels</button>
             <div class="alert" ref="alert" v-show="isAlert"></div>
         </div>
@@ -15,63 +25,169 @@
 import axios from "axios"
 import { saveAs } from 'file-saver';
 export default {
-  name: 'App',
-  data(){
-    return {
-        isLoading: false,
-        isAlert: false
-    }
-  },
-  methods: {
-    async downloadMedia(){
-        const inputUrl = (this.$refs.input.value).trim()
-        this.$refs.input.value = ""
-        if(inputUrl.length > 5){
-            this.isLoading = true
-            const id = new URL(inputUrl).pathname.split('/').filter(val => !!val).at(-1)
-            console.log(id)
-            const url = "http://localhost:3001/api/" + id
-            try {
-                const response = await axios.get(url)
-                if(!response.data.success){
-                    throw new Error(response.data.error)
-                } else {
-                    const reelsLink = response.data.url
-                    await this.getMedia(reelsLink, id)
+    name: 'App',
+    data(){
+        return {
+            isLoading: false,
+            isAlert: false,
+            isDragging: false,
+            selectedFile: null,
+            pathToSave: null
+        }
+    },
+    methods: {
+        /* async downloadMedia(){
+            const inputUrl = (this.$refs.input.value)
+            this.$refs.input.value = ""
+            if(inputUrl.length > 5){
+                this.isLoading = true
+                const id = new URL(inputUrl).pathname.split('/').filter(val => !!val).at(-1)
+                console.log(id)
+                const url = "http://localhost:3001/api/" + id
+                try {
+                    const response = await axios.get(url)
+                    if(!response.data.success){
+                        throw new Error(response.data.error)
+                    } else {
+                        const reelsLink = response.data.url
+                        await this.getMedia(reelsLink, id)
+                    }
+                } catch (error) {
+                    this.setAlert("error", error.message)
+                    this.isLoading = false
                 }
+            }
+        }, */
+        async downloadMedia(){
+            if(this.selectedFile){
+                this.isLoading = true
+                const fileContent = await this.readFile(this.selectedFile)
+                if(fileContent){
+                    const linksArray = fileContent.split('\n').filter(val => !!val)
+                    for(const link of linksArray){
+                        const id = new URL(link).pathname.split('/').filter(val => !!val).at(-1)
+                        console.log(id)
+                        const url = "http://localhost:3001/api/" + id
+                        try {
+                            const response = await axios.get(url)
+                            if(!response.data.success){
+                                throw new Error(response.data.error)
+                            } else {
+                                const reelsLink = response.data.url
+                                await this.getMedia(reelsLink, id)
+                            }
+                        } catch (error) {
+                            this.setAlert("error", error.message)
+                            this.isLoading = false
+                        }
+                    }
+                }
+                
+                /* try {    
+                    const response = await axios.post(url, formData, {
+                        headers: {'Content-Type': 'multipart/form-data'}
+                    })
+                    if(!response.data.success){
+                        throw new Error(response.data.error)
+                    } else {
+                        const reelsLink = response.data.url
+                        await this.getMedia(reelsLink, id)
+                    }
+                } catch (error) {
+                    this.setAlert("error", error.message)
+                    this.isLoading = false
+                } */
+            }
+            this.isLoading = false
+            this.selectedFile = null
+        },
+        async readFile(file){
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+
+                reader.onload = (event) => {
+                const contents = event.target.result;
+                resolve(contents);
+                };
+
+                reader.onerror = (event) => {
+                reject(new Error('Error reading the file'));
+                };
+
+                reader.readAsText(file);
+            });
+        },
+        async getMedia(videoUrl, id){
+            try {
+                const response = await axios.get(videoUrl, { responseType: 'blob' });
+                const blob = response.data;
+                saveAs(blob, id);
+                this.setAlert("success", "Reels successfully downloaded")
             } catch (error) {
                 this.setAlert("error", error.message)
                 this.isLoading = false
             }
+        },
+        setAlert(type, msg){
+            this.isAlert = true
+            if(type == "success"){
+                this.$refs.alert.style.cssText="background-color: #E9F5EA; color: #8EAF50;"
+                this.$refs.alert.innerHTML = msg
+            } else {
+                this.$refs.alert.style.cssText="background-color: #FDE8E6; color: #F34335;"
+                this.$refs.alert.innerHTML = "Error: " + msg
+            }
+            setTimeout(()=> {
+                this.isAlert = false
+            },3000)
+        },
+        selectFile(){
+            this.$refs.input.click()
+        },
+        onFileSelect(event){
+            console.log(event.target.files)
+            const files = event.target.files
+            if(files.length){
+                if(files[0].type.split('/')[0] == 'text'){
+                    this.selectedFile = files[0]
+                } else {
+                    this.setAlert("error", "choosed unsupported file type")
+                }
+            }
+            
+        },
+        deleteFile(){
+            this.selectedFile = null
+            //this.$refs.input.files.length = 0
+        },
+        onDragOver(event){
+            console.log("onDragOver")
+            event.preventDefault()
+            this.isDragging = true
+            event.dataTransfer.dropEffect = "copy"
+        },
+        onDragLeave(event){
+             console.log("onDragLeave")
+            event.preventDefault()
+            this.isDragging = false
+        },
+        onDrop(event){
+            console.log("onDrop")
+            event.preventDefault()
+            this.isDragging = false
+            const files = event.dataTransfer.files
+            if(files.length && files.length == 1){
+                if(files[0].type.split('/')[0] == 'text'){
+                    this.selectedFile = files[0]
+                } else {
+                    this.setAlert("error", "choosed unsupported file type")
+                }
+            } else {
+                this.setAlert("error", "only one file at a time")
+            }
         }
-    },
-    async getMedia(videoUrl, id){
-        try {
-            const response = await axios.get(videoUrl, { responseType: 'blob' });
-            const blob = response.data;
-            saveAs(blob, id);
-            this.setAlert("success", "Reels successfully downloaded")
-        } catch (error) {
-            this.setAlert("error", error.message)
-            this.isLoading = false
-        }
-        this.isLoading = false
-    },
-    setAlert(type, msg){
-        this.isAlert = true
-        if(type == "success"){
-            this.$refs.alert.style.cssText="background-color: #E9F5EA; color: #8EAF50;"
-            this.$refs.alert.innerHTML = msg
-        } else {
-            this.$refs.alert.style.cssText="background-color: #FDE8E6; color: #F34335;"
-            this.$refs.alert.innerHTML = "Error: " + msg
-        }
-        setTimeout(()=> {
-            this.isAlert = false
-        },3000)
-    }
     
-  }
+    }
 }
 </script>
 
@@ -91,7 +207,38 @@ body{
 *::after {
 	box-sizing: border-box;
 }
-
+#show{
+    display: block;
+}
+.deleteIcon{
+    margin-left: 10px;
+    padding: 3px;
+    transition: 0.2s ease-in-out;
+}
+.deleteIcon:hover{
+    background-color: #ebebeb78;
+    cursor: pointer;
+    font-weight: bold;
+}
+.dropArea{
+    margin-bottom: 16px;
+    background-color: #ebebeb78;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: gray;
+    min-height: 200px;
+}
+.dropArea span{
+    color: black;
+    font-weight: bold;
+}
+.dropArea span:hover {
+    cursor: pointer;
+}
+.selectedFile{
+    margin-bottom: 16px;
+}
 .container {
     max-width: 1280px;
     padding: 0 16px;
@@ -120,6 +267,7 @@ body{
     border-radius: 5px;
     border: 1px solid rgba(128,128,128,.418);
     margin-bottom: 16px;
+    display: none;
 }
 .confirmBtn {
     padding: 8px 16px;
