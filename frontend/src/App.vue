@@ -2,9 +2,9 @@
   <div class="container">
         <div class="content-wrapper">
             <div class="overlay" v-if="isLoading"><div class="loader"></div></div>
-            <h2 class="headingText">Cкачать видео Reels из Instagram</h2>
-            <input type="text" class="input" ref="input" placeholder="Вставьте ссылку на Reels"/>
-            <button class="confirmBtn" type="submit" @click.prevent="downloadMedia">Скачать видео</button>
+            <h2 class="headingText">Download Reels from Instagram</h2>
+            <input type="text" class="input" ref="input" placeholder="Insert Reels link"/>
+            <button class="confirmBtn" type="submit" @click.prevent="downloadMedia">Download Reels</button>
             <div class="alert" ref="alert" v-show="isAlert"></div>
         </div>
     </div>
@@ -28,40 +28,43 @@ export default {
         this.$refs.input.value = ""
         if(inputUrl.length > 5){
             this.isLoading = true
-            const startIndex = inputUrl.indexOf('reel') + 5
-            const endIndex = inputUrl.indexOf('/', startIndex)
-            const id = inputUrl.substring(startIndex, endIndex)
+            const id = new URL(inputUrl).pathname.split('/').filter(val => !!val).at(-1)
+            console.log(id)
             const url = "http://localhost:3001/api/" + id
             try {
                 const response = await axios.get(url)
-                const mediaLink = response.data.url
-                const mediaId = response.data.id
-                console.log(mediaLink, mediaId)
-                await this.getMedia(mediaLink, mediaId)
-            } catch {
-                this.setAlert("error")
+                if(!response.data.success){
+                    throw new Error(response.data.error)
+                } else {
+                    const reelsLink = response.data.url
+                    await this.getMedia(reelsLink, id)
+                }
+            } catch (error) {
+                this.setAlert("error", error.message)
+                this.isLoading = false
             }
         }
     },
     async getMedia(videoUrl, id){
         try {
             const response = await axios.get(videoUrl, { responseType: 'blob' });
-            const blob = response.data; // Преобразование данных в Blob
-            saveAs(blob, id); // Сохранение файла с помощью FileSaver.js
-            this.setAlert("success")
+            const blob = response.data;
+            saveAs(blob, id);
+            this.setAlert("success", "Reels successfully downloaded")
         } catch (error) {
-            this.setAlert("error")
+            this.setAlert("error", error.message)
+            this.isLoading = false
         }
         this.isLoading = false
     },
-    setAlert(type){
+    setAlert(type, msg){
         this.isAlert = true
         if(type == "success"){
             this.$refs.alert.style.cssText="background-color: #E9F5EA; color: #8EAF50;"
-            this.$refs.alert.innerHTML = "Reels успешно скачан"
+            this.$refs.alert.innerHTML = msg
         } else {
             this.$refs.alert.style.cssText="background-color: #FDE8E6; color: #F34335;"
-            this.$refs.alert.innerHTML = "Произошла ошибка"
+            this.$refs.alert.innerHTML = "Error: " + msg
         }
         setTimeout(()=> {
             this.isAlert = false
