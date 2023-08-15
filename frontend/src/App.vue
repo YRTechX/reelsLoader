@@ -44,7 +44,7 @@ export default {
                     const linksArray = fileContent.split('\n').filter(val => !!val)
                     for(const link of linksArray){
                         const id = new URL(link).pathname.split('/').filter(val => !!val).at(-1)
-                        let url = "http://localhost:3001/api/" + id
+                        let url = "https://reels-loader-back.vercel.app/api/" + id
                         if(this.pathToSave){
                             url+="?pathToSave="+this.pathToSave
                         }

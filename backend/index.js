@@ -58,3 +58,6 @@ async function download(url, reelId, userPath, maxRetries = 150, retryDelay = 50
   }
 throw new Error(`error is occured, reel-${reelId}.mp4 couldn't be downloaded`)
 }
+app.get('/', (req, res) => {
+  res.status(200).json('Сервер работаетa')
+})
