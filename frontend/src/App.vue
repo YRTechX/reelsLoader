@@ -13,7 +13,8 @@
             <p>Selected file:</p>
             <p class="selectedFile">{{selectedFile.name}}<span class="deleteIcon" @click="deleteFile">✕</span></p>
             </template>
-            <input class="input" id="show" ref="saveDestination" placeholder="path for saving downloaded reels" type="text" v-model="pathToSave"/>
+            <p>Enter path for saving reels (default path is ../downloads)</p>
+            <input class="input" id="show" ref="saveDestination" placeholder="e.g. /downloads/reels" type="text" v-model.trim="pathToSave"/>
             <button class="confirmBtn" type="submit" @click.prevent="downloadMedia">Download Reels</button>
             <div class="alert" ref="alert" v-show="isAlert"></div>
         </div>
@@ -23,7 +24,6 @@
 <script>
 
 import axios from "axios"
-import { saveAs } from 'file-saver';
 export default {
     name: 'App',
     data(){
@@ -36,28 +36,6 @@ export default {
         }
     },
     methods: {
-        /* async downloadMedia(){
-            const inputUrl = (this.$refs.input.value)
-            this.$refs.input.value = ""
-            if(inputUrl.length > 5){
-                this.isLoading = true
-                const id = new URL(inputUrl).pathname.split('/').filter(val => !!val).at(-1)
-                console.log(id)
-                const url = "http://localhost:3001/api/" + id
-                try {
-                    const response = await axios.get(url)
-                    if(!response.data.success){
-                        throw new Error(response.data.error)
-                    } else {
-                        const reelsLink = response.data.url
-                        await this.getMedia(reelsLink, id)
-                    }
-                } catch (error) {
-                    this.setAlert("error", error.message)
-                    this.isLoading = false
-                }
-            }
-        }, */
         async downloadMedia(){
             if(this.selectedFile){
                 this.isLoading = true
@@ -66,37 +44,22 @@ export default {
                     const linksArray = fileContent.split('\n').filter(val => !!val)
                     for(const link of linksArray){
                         const id = new URL(link).pathname.split('/').filter(val => !!val).at(-1)
-                        console.log(id)
-                        const url = "http://localhost:3001/api/" + id
+                        let url = "http://localhost:3001/api/" + id
+                        if(this.pathToSave){
+                            url+="?pathToSave="+this.pathToSave
+                        }
                         try {
                             const response = await axios.get(url)
                             if(!response.data.success){
                                 throw new Error(response.data.error)
                             } else {
-                                const reelsLink = response.data.url
-                                await this.getMedia(reelsLink, id)
+                                this.setAlert('success', response.data.msg)
                             }
                         } catch (error) {
                             this.setAlert("error", error.message)
-                            this.isLoading = false
                         }
                     }
                 }
-                
-                /* try {    
-                    const response = await axios.post(url, formData, {
-                        headers: {'Content-Type': 'multipart/form-data'}
-                    })
-                    if(!response.data.success){
-                        throw new Error(response.data.error)
-                    } else {
-                        const reelsLink = response.data.url
-                        await this.getMedia(reelsLink, id)
-                    }
-                } catch (error) {
-                    this.setAlert("error", error.message)
-                    this.isLoading = false
-                } */
             }
             this.isLoading = false
             this.selectedFile = null
@@ -116,17 +79,6 @@ export default {
 
                 reader.readAsText(file);
             });
-        },
-        async getMedia(videoUrl, id){
-            try {
-                const response = await axios.get(videoUrl, { responseType: 'blob' });
-                const blob = response.data;
-                saveAs(blob, id);
-                this.setAlert("success", "Reels successfully downloaded")
-            } catch (error) {
-                this.setAlert("error", error.message)
-                this.isLoading = false
-            }
         },
         setAlert(type, msg){
             this.isAlert = true
@@ -158,21 +110,18 @@ export default {
         },
         deleteFile(){
             this.selectedFile = null
-            //this.$refs.input.files.length = 0
+            this.$refs.input.value = ""
         },
         onDragOver(event){
-            console.log("onDragOver")
             event.preventDefault()
             this.isDragging = true
             event.dataTransfer.dropEffect = "copy"
         },
         onDragLeave(event){
-             console.log("onDragLeave")
             event.preventDefault()
             this.isDragging = false
         },
         onDrop(event){
-            console.log("onDrop")
             event.preventDefault()
             this.isDragging = false
             const files = event.dataTransfer.files
