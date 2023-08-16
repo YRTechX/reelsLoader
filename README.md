@@ -1,9 +1,28 @@
-# reelsDownloader
+# reelsLoader
 
-For start clone repo
+## Project setup
 
-run ```npm install``` in frontend folder
-run ```npm install``` in backend folder
+### Install frontend dependency
 
-run ```npm run start``` in backend folder
-run ```npm run serve``` in frontend folder
+cd ./frontend/
+
+npm install
+
+#### To run the frontend
+
+npm run serve
+
+#### If you need a Build 
+
+npm run build
+
+### Install backend dependency
+
+cd ./backend/
+
+npm install
+
+
+#### To run the backend on port 3001
+
+npm run start
