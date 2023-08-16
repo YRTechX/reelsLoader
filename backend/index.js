@@ -31,6 +31,9 @@ async function download(url, reelId, userPath, maxRetries = 150, retryDelay = 50
     try {
         const spider = await instaSpider();
         const downloadUrl = await spider.downloadReel(url);
+        if(!downloadUrl){
+          continue
+        }
         const filePath = userPath ? path.join(userPath, `reel-${reelId}.mp4`) : path.join(__dirname, '../downloads', `reel-${reelId}.mp4`);
         const file = fs.createWriteStream(filePath);
 
